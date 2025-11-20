@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WYSIWYG HTML Editor (Code + Preview)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel-bg: #020617;
+      --border: #1f2937;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #f97373;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 45%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(
+        120deg,
+        rgba(15, 23, 42, 0.95),
+        rgba(15, 23, 42, 0.85)
+      );
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header h1 span.logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #f97316, #3b82f6);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+    }
+
+    header .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    header .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    header .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    header kbd {
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 2px 6px;
+      font-size: 11px;
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    main {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .panel {
+      flex: 1;
+      background: radial-gradient(circle at top left, #111827 0, #020617 40%);
+      border-radius: var(--radius);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.8);
+      background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.95),
+        rgba(2, 6, 23, 0.95)
+      );
+      font-size: 12px;
+    }
+
+    .panel-header .title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    .panel-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+    }
+
+    .panel-header .info {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .panel-body {
+      padding: 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      background: #020617;
+      color: var(--text);
+      border-radius: 8px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      padding: 10px;
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular,
+        Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7);
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft), 0 0 18px rgba(37, 99, 235, 0.5);
+    }
+
+    .preview-wrapper {
+      flex: 1;
+      border-radius: 8px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: #020617;
+      padding: 10px;
+      overflow: auto;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7);
+      position: relative;
+    }
+
+    .preview-wrapper.focused {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft), 0 0 18px rgba(37, 99, 235, 0.5);
+    }
+
+    #preview {
+      min-height: 100%;
+      outline: none;
+      color: #e5e7eb;
+      font-size: 14px;
+    }
+
+    #preview:empty::before {
+      content: "Start typing HTML in the code panel, or edit directly here…";
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .preview-highlight {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 4px;
+      transition: outline-color 0.1s ease-out;
+    }
+
+    .status-bar {
+      padding: 6px 10px;
+      border-top: 1px solid rgba(31, 41, 55, 0.8);
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .status-badge {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
+    }
+
+    .status-error .status-dot {
+      background: var(--danger);
+      box-shadow: 0 0 8px rgba(248, 113, 113, 0.9);
+    }
+
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pill-small {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 2px 6px;
+      font-size: 10px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>
+        <span class="logo-dot"></span>
+        WYSIWYG HTML Studio
+      </h1>
+      <div class="subtitle">Code ⇄ Live Preview, linked in both directions</div>
+    </div>
+    <div class="controls">
+      <div class="pill">
+        <span>Sync both ways</span>
+      </div>
+      <div class="pill">
+        <span>Shortcuts:</span>
+        <kbd>Ctrl</kbd> + <kbd>Enter</kbd> <span>force refresh preview</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- CODE PANEL -->
+    <section class="panel" aria-label="Code editor">
+      <div class="panel-header">
+        <div class="title">
+          <span class="dot"></span>
+          <span>HTML Code</span>
+        </div>
+        <div class="info">Type HTML here – caret tries to map to preview element</div>
+      </div>
+      <div class="panel-body">
+        <textarea id="codeEditor" spellcheck="false"></textarea>
+      </div>
+      <div class="status-bar" id="codeStatusBar">
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          <span id="syncStatus">Synced to preview</span>
+        </div>
+        <div class="status-right">
+          <span id="cursorPos" class="pill-small">Line 1, Col 1</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREVIEW PANEL -->
+    <section class="panel" aria-label="Preview">
+      <div class="panel-header">
+        <div class="title">
+          <span class="dot"></span>
+          <span>Live Preview (Editable)</span>
+        </div>
+        <div class="info">Click elements to select matching HTML in code</div>
+      </div>
+      <div class="panel-body">
+        <div class="preview-wrapper" id="previewWrapper">
+          <div id="preview" contenteditable="true"></div>
+        </div>
+      </div>
+      <div class="status-bar" id="previewStatusBar">
+        <div class="status-badge" id="previewSyncBadge">
+          <span class="status-dot"></span>
+          <span id="previewStatus">Synced to code</span>
+        </div>
+        <div class="status-right">
+          <span class="pill-small">Editable DOM</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var codeEditor = document.getElementById("codeEditor");
+      var preview = document.getElementById("preview");
+      var previewWrapper = document.getElementById("previewWrapper");
+      var syncStatus = document.getElementById("syncStatus");
+      var previewStatus = document.getElementById("previewStatus");
+      var previewSyncBadge = document.getElementById("previewSyncBadge");
+      var codeStatusBar = document.getElementById("codeStatusBar");
+      var cursorPosEl = document.getElementById("cursorPos");
+
+      var isSyncingFromCode = false;
+      var isSyncingFromPreview = false;
+      var codeSyncTimeout = null;
+      var previewSyncTimeout = null;
+
+      var initialHTML =
+        "<h1 id=\"title\">Hello WYSIWYG Editor 👋</h1>\n" +
+        "<p class=\"lead\">Edit the <strong>HTML code</strong> on the left,\n" +
+        "or edit this preview directly. Click elements here to\n" +
+        "highlight their HTML in the code panel.</p>\n" +
+        "<ul>\n" +
+        "  <li>Bi-directional sync</li>\n" +
+        "  <li>Best-effort mapping between code and preview</li>\n" +
+        "  <li>Fully client-side, no backend</li>\n" +
+        "</ul>\n";
+
+      codeEditor.value = initialHTML;
+      preview.innerHTML = initialHTML;
+      updateCursorPosition();
+
+      function debounce(fn, delay) {
+        var timer;
+        return function () {
+          var ctx = this;
+          var args = arguments;
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            fn.apply(ctx, args);
+          }, delay);
+        };
+      }
+
+      function cssEscape(ident) {
+        if (window.CSS && typeof window.CSS.escape === "function") {
+          return window.CSS.escape(ident);
+        }
+        return ident.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+      }
+
+      function clearPreviewHighlights() {
+        var highlighted = preview.querySelectorAll(".preview-highlight");
+        highlighted.forEach(function (el) {
+          el.classList.remove("preview-highlight");
+        });
+      }
+
+      function updateCursorPosition() {
+        var value = codeEditor.value;
+        var pos = codeEditor.selectionStart || 0;
+        var lines = value.slice(0, pos).split("\n");
+        var line = lines.length;
+        var col = lines[lines.length - 1].length + 1;
+        cursorPosEl.textContent = "Line " + line + ", Col " + col;
+      }
+
+      function syncFromCode() {
+        if (isSyncingFromPreview) return;
+        isSyncingFromCode = true;
+
+        preview.innerHTML = codeEditor.value;
+
+        if (codeSyncTimeout) clearTimeout(codeSyncTimeout);
+        syncStatus.textContent = "Updating preview…";
+        codeStatusBar.classList.remove("status-error");
+        codeStatusBar.classList.add("status-ok");
+        setStatusDot(codeStatusBar, true);
+
+        codeSyncTimeout = setTimeout(function () {
+          syncStatus.textContent = "Synced to preview";
+        }, 600);
+
+        isSyncingFromCode = false;
+        highlightPreviewFromCodeCaret();
+      }
+
+      function syncFromPreview() {
+        if (isSyncingFromCode) return;
+        isSyncingFromPreview = true;
+
+        codeEditor.value = preview.innerHTML;
+
+        if (previewSyncTimeout) clearTimeout(previewSyncTimeout);
+        previewStatus.textContent = "Updating code…";
+        previewSyncBadge.classList.remove("status-error");
+        previewSyncBadge.classList.add("status-ok");
+        setStatusDot(previewSyncBadge, true);
+
+        previewSyncTimeout = setTimeout(function () {
+          previewStatus.textContent = "Synced to code";
+        }, 600);
+
+        isSyncingFromPreview = false;
+        updateCursorPosition();
+      }
+
+      function setStatusDot(container, ok) {
+        var dot = container.querySelector(".status-dot");
+        if (!dot) return;
+        if (ok) {
+          dot.style.background = "#22c55e";
+          dot.style.boxShadow = "0 0 8px rgba(34, 197, 94, 0.9)";
+        } else {
+          dot.style.background = "#f97373";
+          dot.style.boxShadow = "0 0 8px rgba(248, 113, 113, 0.9)";
+        }
+      }
+
+      function highlightPreviewFromCodeCaret() {
+        var value = codeEditor.value;
+        var pos = codeEditor.selectionStart || 0;
+        if (!value || pos < 0 || pos > value.length) {
+          clearPreviewHighlights();
+          return;
+        }
+
+        var start = value.lastIndexOf("<", pos);
+        var end = value.indexOf(">", pos);
+
+        if (start === -1 || end === -1 || end <= start) {
+          clearPreviewHighlights();
+          return;
+        }
+
+        var tagContent = value.slice(start + 1, end).trim();
+        if (!tagContent) {
+          clearPreviewHighlights();
+          return;
+        }
+
+        var isClosing = tagContent[0] === "/";
+        if (isClosing) {
+          tagContent = tagContent.slice(1).trim();
+        }
+
+        var spaceIdx = tagContent.indexOf(" ");
+        var tagName =
+          spaceIdx === -1
+            ? tagContent.toLowerCase()
+            : tagContent.slice(0, spaceIdx).toLowerCase();
+
+        if (!tagName) {
+          clearPreviewHighlights();
+          return;
+        }
+
+        var idMatch = tagContent.match(/id\s*=\s*["']([^"']+)["']/i);
+        var classMatch = tagContent.match(/class\s*=\s*["']([^"']+)["']/i);
+
+        var selector;
+        if (idMatch) {
+          selector = "#" + cssEscape(idMatch[1]);
+        } else if (classMatch) {
+          var classes = classMatch[1]
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(function (c) {
+              return "." + cssEscape(c);
+            })
+            .join("");
+          selector = tagName + classes;
+        } else {
+          selector = tagName;
+        }
+
+        clearPreviewHighlights();
+        var el = preview.querySelector(selector);
+        if (el) {
+          el.classList.add("preview-highlight");
+          el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      }
+
+      function highlightCodeForElement(el) {
+        if (!el || !el.outerHTML) return;
+        var outer = el.outerHTML.trim();
+        var value = codeEditor.value;
+        var idx = value.indexOf(outer);
+        if (idx === -1) {
+          return;
+        }
+
+        codeEditor.focus();
+        codeEditor.setSelectionRange(idx, idx + outer.length);
+        updateCursorPosition();
+      }
+
+      var debouncedSyncFromCode = debounce(syncFromCode, 200);
+      var debouncedSyncFromPreview = debounce(syncFromPreview, 200);
+
+      codeEditor.addEventListener("input", function () {
+        debouncedSyncFromCode();
+      });
+
+      codeEditor.addEventListener("keyup", function () {
+        updateCursorPosition();
+        highlightPreviewFromCodeCaret();
+      });
+
+      codeEditor.addEventListener("click", function () {
+        updateCursorPosition();
+        highlightPreviewFromCodeCaret();
+      });
+
+      codeEditor.addEventListener("focus", function () {
+        previewWrapper.classList.remove("focused");
+      });
+
+      codeEditor.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          syncFromCode();
+        }
+      });
+
+      preview.addEventListener("input", function () {
+        debouncedSyncFromPreview();
+      });
+
+      preview.addEventListener("focus", function () {
+        previewWrapper.classList.add("focused");
+      });
+
+      preview.addEventListener("blur", function () {
+        previewWrapper.classList.remove("focused");
+      });
+
+      preview.addEventListener("click", function (e) {
+        var target = e.target;
+        if (!preview.contains(target)) return;
+
+        clearPreviewHighlights();
+        if (target !== preview) {
+          target.classList.add("preview-highlight");
+        }
+        highlightCodeForElement(target);
+      });
+    })();
+  </script>
+</body>
+</html>
